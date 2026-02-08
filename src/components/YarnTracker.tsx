@@ -744,18 +744,18 @@ const YarnTracker = () => {
                     className="cursor-pointer"
                   >
                     <h2 className="text-2xl font-bold text-purple-700 mb-3">{project.title}</h2>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="bg-blue-50 rounded-xl p-3">
-                        <div className="text-blue-600 font-semibold">Current Row</div>
-                        <div className="text-2xl font-bold text-blue-800">{currentRowDisplay}</div>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-sm">
+                      <div className="bg-blue-50 rounded-xl p-2 sm:p-3">
+                        <div className="text-blue-600 font-semibold text-xs sm:text-sm">Current Row</div>
+                        <div className="text-xl sm:text-2xl font-bold text-blue-800">{currentRowDisplay}</div>
                       </div>
-                      <div className="bg-green-50 rounded-xl p-3">
-                        <div className="text-green-600 font-semibold">Sessions</div>
-                        <div className="text-2xl font-bold text-green-800">{project.sessions.length}</div>
+                      <div className="bg-green-50 rounded-xl p-2 sm:p-3">
+                        <div className="text-green-600 font-semibold text-xs sm:text-sm">Sessions</div>
+                        <div className="text-xl sm:text-2xl font-bold text-green-800">{project.sessions.length}</div>
                       </div>
-                      <div className="bg-purple-50 rounded-xl p-3">
-                        <div className="text-purple-600 font-semibold">Total Time</div>
-                        <div className="text-lg font-bold text-purple-800">{formatTime(project.totalTime)}</div>
+                      <div className="bg-purple-50 rounded-xl p-2 sm:p-3">
+                        <div className="text-purple-600 font-semibold text-xs sm:text-sm">Total Time</div>
+                        <div className="text-base sm:text-lg font-bold text-purple-800">{formatTime(project.totalTime)}</div>
                       </div>
                     </div>
                   </div>
@@ -994,68 +994,68 @@ const YarnTracker = () => {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 px-3 sm:p-6 flex flex-col">
+        <div className="max-w-4xl mx-auto w-full flex flex-col flex-1 min-h-0 py-4 sm:py-0">
           <button
             onClick={handleBackToProjects}
-            className="mb-6 flex items-center gap-2 text-purple-700 hover:text-purple-900"
+            className="mb-2 sm:mb-4 flex items-center gap-2 text-purple-700 hover:text-purple-900 shrink-0"
           >
             <ArrowLeft size={20} />
             Back to Projects
           </button>
 
-          <h1 className="text-3xl font-bold text-purple-800 mb-6">{activeProject.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-purple-800 mb-2 sm:mb-4 shrink-0">{activeProject.title}</h1>
 
           {/* Timer Section */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg mb-3 sm:mb-6 overflow-hidden shrink-0">
             <div className="flex items-center justify-between mb-4">
-              <div>
+              <div className="min-w-0">
                 <div className="text-sm text-purple-600 font-semibold">Current Session</div>
-                <div className="text-3xl font-bold text-purple-800">
+                <div className="text-2xl sm:text-3xl font-bold text-purple-800">
                   {formatTime(sessionElapsed)}
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right min-w-0">
                 <div className="text-sm text-blue-600 font-semibold">Total Time</div>
-                <div className="text-2xl font-bold text-blue-800">
+                <div className="text-xl sm:text-2xl font-bold text-blue-800">
                   {formatTime(activeProject.totalTime + sessionElapsed)}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
                 onClick={handleTogglePlayPause}
-                className={`flex-1 ${
-                  !sessionStartTime || isPaused 
-                    ? 'bg-green-400 hover:bg-green-500' 
+                className={`${
+                  !sessionStartTime || isPaused
+                    ? 'bg-green-400 hover:bg-green-500'
                     : 'bg-yellow-400 hover:bg-yellow-500'
-                } text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all`}
+                } text-white px-2 sm:px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-1 sm:gap-2 transition-all`}
               >
                 {!sessionStartTime || isPaused ? <Play size={20} /> : <Pause size={20} />}
-                {!sessionStartTime || isPaused ? 'Start' : 'Pause'}
-              </button>
-              <button
-                onClick={handleDiscardSession}
-                disabled={!sessionStartTime}
-                className="flex-1 bg-gray-400 text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-500 transition-all"
-              >
-                <Trash2 size={20} />
-                Discard
+                <span className="hidden sm:inline">{!sessionStartTime || isPaused ? 'Start' : 'Pause'}</span>
               </button>
               <button
                 onClick={handleEndSession}
                 disabled={!sessionStartTime}
-                className="flex-1 bg-red-400 text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-500 transition-all"
+                className="bg-red-400 text-white px-2 sm:px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-1 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-500 transition-all"
               >
                 <Square size={20} />
-                End
+                <span className="hidden sm:inline">End</span>
+              </button>
+              <button
+                onClick={handleDiscardSession}
+                disabled={!sessionStartTime}
+                className="bg-gray-400 text-white px-2 sm:px-4 py-3 rounded-xl font-semibold flex items-center justify-center gap-1 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-500 transition-all"
+              >
+                <Trash2 size={20} />
+                <span className="hidden sm:inline">Discard</span>
               </button>
             </div>
           </div>
 
           {/* Pattern Display */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 max-h-96 overflow-y-auto relative">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg mb-3 sm:mb-6 flex-1 min-h-0 overflow-y-auto relative">
             {activeProject.activeRepeat && (
               <div className="bg-gradient-to-r from-blue-100 to-purple-100 border-2 border-blue-300 rounded-xl p-4 mb-4 sticky top-0 z-10 shadow-md">
                 <div className="text-sm font-semibold text-blue-800 mb-1">Active Repeat:</div>
@@ -1105,21 +1105,21 @@ const YarnTracker = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 shrink-0 pb-1">
             <button
               onClick={handlePreviousRow}
               disabled={!sessionStartTime || isPaused || activeProject.currentRow === -1}
-              className="flex-1 bg-gradient-to-r from-gray-300 to-gray-400 text-white px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-gray-400 hover:to-gray-500 transition-all shadow-lg"
+              className="flex-1 min-w-[120px] bg-gradient-to-r from-gray-300 to-gray-400 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-gray-400 hover:to-gray-500 transition-all shadow-lg text-sm sm:text-base"
             >
-              <ChevronRight size={24} className="rotate-180" />
-              Previous Row
+              <ChevronRight size={20} className="rotate-180" />
+              Previous
             </button>
 
             {hasRepeatAfterCurrent && !activeProject.activeRepeat && (
               <button
                 onClick={() => handleStartRepeat(nextRepeatItem)}
                 disabled={!sessionStartTime || isPaused}
-                className="flex-1 bg-gradient-to-r from-blue-300 to-green-300 text-white px-6 py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-400 hover:to-green-400 transition-all shadow-lg"
+                className="flex-1 min-w-[120px] bg-gradient-to-r from-blue-300 to-green-300 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-400 hover:to-green-400 transition-all shadow-lg text-sm sm:text-base"
               >
                 Start Repeat
               </button>
@@ -1129,7 +1129,7 @@ const YarnTracker = () => {
               <button
                 onClick={handleRepeatAgain}
                 disabled={!sessionStartTime || isPaused}
-                className="flex-1 bg-gradient-to-r from-green-300 to-blue-300 text-white px-6 py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-green-400 hover:to-blue-400 transition-all shadow-lg"
+                className="flex-1 min-w-[120px] bg-gradient-to-r from-green-300 to-blue-300 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-green-400 hover:to-blue-400 transition-all shadow-lg text-sm sm:text-base"
               >
                 Repeat Again
               </button>
@@ -1139,28 +1139,28 @@ const YarnTracker = () => {
               <button
                 onClick={handleFinishRepeats}
                 disabled={!sessionStartTime || isPaused}
-                className="flex-1 bg-gradient-to-r from-orange-300 to-red-300 text-white px-6 py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-orange-400 hover:to-red-400 transition-all shadow-lg"
+                className="flex-1 min-w-[120px] bg-gradient-to-r from-orange-300 to-red-300 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-orange-400 hover:to-red-400 transition-all shadow-lg text-sm sm:text-base"
               >
                 Finish Repeats
               </button>
             )}
-            
+
             {!hasRepeatAfterCurrent && !isAtEndOfActiveRepeat && (
               <button
                 onClick={isOnFinalInstruction ? handleFinishProject : handleNextRow}
                 disabled={!sessionStartTime || isPaused}
-                className="flex-1 bg-gradient-to-r from-pink-300 to-purple-300 text-white px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg"
+                className="flex-1 min-w-[120px] bg-gradient-to-r from-pink-300 to-purple-300 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg text-sm sm:text-base"
               >
                 {isOnFinalInstruction ? 'Finish Project 🎉' : 'Next Row'}
-                {!isOnFinalInstruction && <ChevronRight size={24} />}
+                {!isOnFinalInstruction && <ChevronRight size={20} />}
               </button>
             )}
 
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="bg-blue-300 text-white px-6 py-4 rounded-2xl font-semibold hover:bg-blue-400 transition-all shadow-lg"
+              className="bg-blue-300 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-semibold hover:bg-blue-400 transition-all shadow-lg"
             >
-              <List size={24} />
+              <List size={20} />
             </button>
           </div>
 
