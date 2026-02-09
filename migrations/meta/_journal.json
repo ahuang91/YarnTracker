@@ -8,6 +8,13 @@
       "when": 1770597427202,
       "tag": "0000_freezing_wiccan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770608205917,
+      "tag": "0001_parched_baron_zemo",
+      "breakpoints": true
     }
   ]
 }
