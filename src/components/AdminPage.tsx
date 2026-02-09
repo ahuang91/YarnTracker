@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ShieldOff } from 'lucide-react';
+import { useAuth } from '../lib/auth-context';
 
 interface User {
   id: string;
@@ -13,12 +14,14 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ onBack }: AdminPageProps) {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [resetUsername, setResetUsername] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/admin/users')
@@ -51,6 +54,27 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       setMessage(data.error ?? 'Reset failed');
     }
     setIsSubmitting(false);
+  };
+
+  const handleToggleAdmin = async (userId: string, newIsAdmin: boolean) => {
+    setTogglingUserId(userId);
+    setMessage('');
+    const res = await fetch('/api/auth/admin/toggle-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, isAdmin: newIsAdmin }),
+    });
+
+    if (res.ok) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, isAdmin: newIsAdmin } : u)),
+      );
+      setMessage(`User ${newIsAdmin ? 'promoted to admin' : 'demoted to member'}`);
+    } else {
+      const data = await res.json();
+      setMessage(data.error ?? 'Failed to update role');
+    }
+    setTogglingUserId(null);
   };
 
   return (
@@ -90,16 +114,32 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                       Joined {new Date(u.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setResetUsername(resetUsername === u.username ? null : u.username);
-                      setNewPassword('');
-                      setMessage('');
-                    }}
-                    className="text-sm text-purple-500 hover:text-purple-700"
-                  >
-                    Reset Password
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {currentUser?.id !== u.id && (
+                      <button
+                        onClick={() => handleToggleAdmin(u.id, !u.isAdmin)}
+                        disabled={togglingUserId === u.id}
+                        className={`flex items-center gap-1 text-sm px-2 py-1 rounded-lg transition-all disabled:opacity-50 ${
+                          u.isAdmin
+                            ? 'text-orange-600 hover:bg-orange-50'
+                            : 'text-green-600 hover:bg-green-50'
+                        }`}
+                      >
+                        {u.isAdmin ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
+                        {u.isAdmin ? 'Demote' : 'Promote'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setResetUsername(resetUsername === u.username ? null : u.username);
+                        setNewPassword('');
+                        setMessage('');
+                      }}
+                      className="text-sm text-purple-500 hover:text-purple-700"
+                    >
+                      Reset Password
+                    </button>
+                  </div>
                 </div>
 
                 {resetUsername === u.username && (

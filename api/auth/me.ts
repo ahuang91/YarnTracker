@@ -23,5 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ user: null });
   }
 
-  return res.json({ user: rows[0] });
+  const user = rows[0];
+
+  // Auto-promote if ADMIN_USERNAME matches but DB hasn't been updated yet
+  if (process.env.ADMIN_USERNAME && process.env.ADMIN_USERNAME === user.username && !user.isAdmin) {
+    await db.update(users).set({ isAdmin: true }).where(eq(users.id, user.id));
+    user.isAdmin = true;
+  }
+
+  return res.json({ user });
 }

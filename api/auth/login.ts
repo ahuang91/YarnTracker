@@ -31,6 +31,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
+  // Auto-promote if ADMIN_USERNAME matches but DB hasn't been updated yet
+  if (process.env.ADMIN_USERNAME && process.env.ADMIN_USERNAME === username && !user.isAdmin) {
+    await db.update(users).set({ isAdmin: true }).where(eq(users.id, user.id));
+    user.isAdmin = true;
+  }
+
   const token = await createToken({
     userId: user.id,
     username: user.username,
