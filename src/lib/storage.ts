@@ -7,28 +7,28 @@ export interface StorageBackend {
 
 class ApiStorageBackend implements StorageBackend {
   async list(prefix: string): Promise<{ keys: string[] }> {
-    const res = await fetch(`/api/storage/list?prefix=${encodeURIComponent(prefix)}`);
+    const res = await fetch(`/api/storage?action=list&prefix=${encodeURIComponent(prefix)}`);
     return res.json();
   }
 
   async get(key: string): Promise<{ value: string | null }> {
-    const res = await fetch(`/api/storage/get?key=${encodeURIComponent(key)}`);
+    const res = await fetch(`/api/storage?action=get&key=${encodeURIComponent(key)}`);
     return res.json();
   }
 
   async set(key: string, value: string): Promise<void> {
-    await fetch('/api/storage/set', {
+    await fetch('/api/storage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
+      body: JSON.stringify({ action: 'set', key, value }),
     });
   }
 
   async delete(key: string): Promise<void> {
-    await fetch('/api/storage/delete', {
+    await fetch('/api/storage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key }),
+      body: JSON.stringify({ action: 'delete', key }),
     });
   }
 }

@@ -24,7 +24,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/auth/admin/users')
+    fetch('/api/auth/admin?action=users')
       .then((res) => res.json())
       .then((data) => setUsers(data.users ?? []))
       .catch(() => setUsers([]))
@@ -39,10 +39,10 @@ export default function AdminPage({ onBack }: AdminPageProps) {
 
     setIsSubmitting(true);
     setMessage('');
-    const res = await fetch('/api/auth/admin/reset-password', {
+    const res = await fetch('/api/auth/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, newPassword }),
+      body: JSON.stringify({ action: 'reset-password', username, newPassword }),
     });
 
     if (res.ok) {
@@ -59,10 +59,10 @@ export default function AdminPage({ onBack }: AdminPageProps) {
   const handleToggleAdmin = async (userId: string, username: string, newIsAdmin: boolean) => {
     setTogglingUserId(userId);
     setMessage('');
-    const res = await fetch('/api/auth/admin/toggle-admin', {
+    const res = await fetch('/api/auth/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, isAdmin: newIsAdmin }),
+      body: JSON.stringify({ action: 'toggle-admin', userId, isAdmin: newIsAdmin }),
     });
 
     if (res.ok) {
