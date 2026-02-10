@@ -28,12 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!import.meta.env.PROD) {
-      setUser({ id: 'local', username: 'local', isAdmin: true });
-      setIsLoading(false);
-      return;
-    }
-
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => setUser(data.user ?? null))

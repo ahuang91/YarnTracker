@@ -6,6 +6,7 @@ import { serialize } from 'cookie';
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 const COOKIE_NAME = 'auth_token';
 const MAX_AGE = 7 * 24 * 60 * 60; // 7 days
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -47,7 +48,7 @@ export function setAuthCookie(res: VercelResponse, token: string): void {
     'Set-Cookie',
     serialize(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: true,
+      secure: IS_PROD,
       sameSite: 'lax',
       path: '/',
       maxAge: MAX_AGE,
@@ -60,7 +61,7 @@ export function clearAuthCookie(res: VercelResponse): void {
     'Set-Cookie',
     serialize(COOKIE_NAME, '', {
       httpOnly: true,
-      secure: true,
+      secure: IS_PROD,
       sameSite: 'lax',
       path: '/',
       maxAge: 0,

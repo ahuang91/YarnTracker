@@ -56,7 +56,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
     setIsSubmitting(false);
   };
 
-  const handleToggleAdmin = async (userId: string, newIsAdmin: boolean) => {
+  const handleToggleAdmin = async (userId: string, username: string, newIsAdmin: boolean) => {
     setTogglingUserId(userId);
     setMessage('');
     const res = await fetch('/api/auth/admin/toggle-admin', {
@@ -69,7 +69,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, isAdmin: newIsAdmin } : u)),
       );
-      setMessage(`User ${newIsAdmin ? 'promoted to admin' : 'demoted to member'}`);
+      setMessage(`User ${username} was ${newIsAdmin ? 'promoted to admin' : 'demoted to member'}`);
     } else {
       const data = await res.json();
       setMessage(data.error ?? 'Failed to update role');
@@ -117,7 +117,7 @@ export default function AdminPage({ onBack }: AdminPageProps) {
                   <div className="flex items-center gap-2">
                     {currentUser?.id !== u.id && (
                       <button
-                        onClick={() => handleToggleAdmin(u.id, !u.isAdmin)}
+                        onClick={() => handleToggleAdmin(u.id, u.username, !u.isAdmin)}
                         disabled={togglingUserId === u.id}
                         className={`flex items-center gap-1 text-sm px-2 py-1 rounded-lg transition-all disabled:opacity-50 ${
                           u.isAdmin
