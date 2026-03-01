@@ -85,8 +85,32 @@ const YarnTracker = () => {
             }
           })
         );
-        setProjects(loadedProjects.filter(p => p !== null));
-        console.log('Projects loaded successfully:', loadedProjects.length);
+        const filtered = loadedProjects.filter(p => p !== null);
+        setProjects(filtered);
+        console.log('Projects loaded successfully:', filtered.length);
+
+        // Restore paused session after reload
+        const savedSession = sessionStorage.getItem('yarn-tracker-session');
+        if (savedSession) {
+          try {
+            const s = JSON.parse(savedSession);
+            const project = filtered.find(p => p.id === s.projectId);
+            if (project) {
+              setActiveProject(project);
+              setCurrentView('active');
+              setSessionStartTime(s.sessionStartTime);
+              setPausedAt(s.pausedAt);
+              setIsPaused(s.isPaused);
+              setSessionElapsed(s.sessionElapsed);
+              setSessionStartRow(s.sessionStartRow);
+              setSessionRowsWorked(s.sessionRowsWorked);
+            } else {
+              sessionStorage.removeItem('yarn-tracker-session');
+            }
+          } catch {
+            sessionStorage.removeItem('yarn-tracker-session');
+          }
+        }
       } else {
         setProjects([]);
         console.log('No projects found');
@@ -112,6 +136,21 @@ const YarnTracker = () => {
     }
     return () => clearInterval(interval);
   }, [sessionStartTime, isPaused, pausedAt]);
+
+  // Persist session state to sessionStorage so page reloads don't lose the timer
+  useEffect(() => {
+    if (sessionStartTime && activeProject) {
+      sessionStorage.setItem('yarn-tracker-session', JSON.stringify({
+        projectId: activeProject.id,
+        sessionStartTime,
+        pausedAt,
+        isPaused,
+        sessionElapsed,
+        sessionStartRow,
+        sessionRowsWorked,
+      }));
+    }
+  }, [sessionStartTime, isPaused, pausedAt, sessionElapsed, sessionRowsWorked, sessionStartRow, activeProject]);
 
   // Auto-scroll to current row
   useEffect(() => {
@@ -542,6 +581,7 @@ const YarnTracker = () => {
   };
 
   const handleDiscardSession = () => {
+    sessionStorage.removeItem('yarn-tracker-session');
     setSessionStartTime(null);
     setSessionElapsed(0);
     setIsPaused(false);
@@ -578,6 +618,7 @@ const YarnTracker = () => {
     });
     
     // Clear session state
+    sessionStorage.removeItem('yarn-tracker-session');
     setSessionStartTime(null);
     setSessionElapsed(0);
     setIsPaused(false);
