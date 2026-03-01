@@ -3,6 +3,20 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, Plus, ArrowLeft, ChevronRight, List, Trash2 } from 'lucide-react';
 import { storage } from '../lib/storage';
 
+const YARN_TYPES = [
+  'Regular', 'Chenille', 'Boucle', 'Faux Fur', 'Cotton',
+  'Brushed', 'Acrylic', 'Velvet', 'Ribbon', 'Metallic', 'Mohair',
+];
+const YARN_SIZES = [
+  '0 - Lace', '1 - Super Fine', '2 - Fine', '3 - Light',
+  '4 - Medium', '5 - Bulky', '6 - Super Bulky', '7 - Jumbo',
+];
+const YARN_MATERIALS = [
+  'Acrylic', 'Wool', 'Wool Blend', 'Merino Wool', 'Cotton', 'Cotton Blend',
+  'Polyester', 'Polyester Acrylic Blend', 'Nylon', 'Bamboo', 'Alpaca',
+  'Mohair', 'Cashmere', 'Linen',
+];
+
 const YarnTracker = () => {
   const [projects, setProjects] = useState([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
@@ -25,6 +39,23 @@ const YarnTracker = () => {
   const [sessionRowsWorked, setSessionRowsWorked] = useState(0);
   const [pausedAt, setPausedAt] = useState(null);
   const [wasPausedBeforeExit, setWasPausedBeforeExit] = useState(false);
+  const [yarnInventory, setYarnInventory] = useState([]);
+  const [yarnForm, setYarnForm] = useState({
+    brand: '',
+    productName: '',
+    color: '',
+    type: '',
+    size: '',
+    material: '',
+    quantity: 1,
+    weightPerSkein: '',
+    careInstructions: '',
+    lotNumber: '',
+  });
+  const [editingYarnId, setEditingYarnId] = useState(null);
+  const [showDeleteYarnDialog, setShowDeleteYarnDialog] = useState(false);
+  const [yarnToDelete, setYarnToDelete] = useState(null);
+  const [showYarnEmptyFieldsDialog, setShowYarnEmptyFieldsDialog] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     pattern: '',
@@ -37,6 +68,11 @@ const YarnTracker = () => {
   // Load projects from storage
   useEffect(() => {
     loadProjectsFromStorage();
+  }, []);
+
+  // Load yarn inventory from storage
+  useEffect(() => {
+    loadYarnFromStorage();
   }, []);
 
   const loadProjectsFromStorage = async () => {
@@ -158,6 +194,29 @@ const YarnTracker = () => {
       currentRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [activeProject?.currentRow]);
+
+  // Auto-populate yarn form fields when brand+name match an existing entry
+  useEffect(() => {
+    if (editingYarnId) return;
+    if (!yarnForm.productName) return;
+    const normalizedName = yarnForm.productName.toLowerCase().trim();
+    const normalizedBrand = yarnForm.brand.toLowerCase().trim();
+    const match = yarnInventory.find(y => {
+      const nameMatch = y.productName.toLowerCase().trim() === normalizedName;
+      const brandMatch = !normalizedBrand || !y.brand ||
+        y.brand.toLowerCase().trim() === normalizedBrand;
+      return nameMatch && brandMatch;
+    });
+    if (!match) return;
+    setYarnForm(prev => ({
+      ...prev,
+      type: prev.type || match.type || '',
+      size: prev.size || match.size || '',
+      material: prev.material || match.material || '',
+      weightPerSkein: prev.weightPerSkein || match.weightPerSkein || '',
+      careInstructions: prev.careInstructions || match.careInstructions || '',
+    }));
+  }, [yarnForm.brand, yarnForm.productName, editingYarnId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsePattern = (patternText) => {
     const lines = patternText.split('\n').filter(line => line.trim());
@@ -704,6 +763,79 @@ const YarnTracker = () => {
     setProjects([]);
   };
 
+  // Yarn inventory functions
+  const loadYarnFromStorage = async () => {
+    try {
+      const result = await storage.list('yarn:');
+      if (result && result.keys && result.keys.length > 0) {
+        const loaded = await Promise.all(
+          result.keys.map(async (key) => {
+            try {
+              const data = await storage.get(key);
+              return data?.value ? JSON.parse(data.value) : null;
+            } catch { return null; }
+          })
+        );
+        setYarnInventory(loaded.filter(y => y !== null));
+      }
+    } catch (error) {
+      console.error('Error loading yarn inventory:', error);
+    }
+  };
+
+  const saveYarnEntry = async (yarn) => {
+    await storage.set(`yarn:${yarn.id}`, JSON.stringify(yarn));
+  };
+
+  const handleSaveYarn = async () => {
+    if (!yarnForm.productName || !yarnForm.color) {
+      setShowYarnEmptyFieldsDialog(true);
+      return;
+    }
+    if (editingYarnId) {
+      const updated = { ...yarnForm, id: editingYarnId };
+      await saveYarnEntry(updated);
+      setYarnInventory(yarnInventory.map(y => y.id === editingYarnId ? updated : y));
+    } else {
+      const newYarn = { ...yarnForm, id: Date.now().toString() };
+      await saveYarnEntry(newYarn);
+      setYarnInventory([...yarnInventory, newYarn]);
+    }
+    setCurrentView('inventory');
+    setYarnForm({ brand: '', productName: '', color: '', type: '', size: '', material: '', quantity: 1, weightPerSkein: '', careInstructions: '', lotNumber: '' });
+    setEditingYarnId(null);
+  };
+
+  const handleEditYarn = (yarn) => {
+    setYarnForm({
+      brand: yarn.brand || '',
+      productName: yarn.productName || '',
+      color: yarn.color || '',
+      type: yarn.type || '',
+      size: yarn.size || '',
+      material: yarn.material || '',
+      quantity: yarn.quantity || 1,
+      weightPerSkein: yarn.weightPerSkein || '',
+      careInstructions: yarn.careInstructions || '',
+      lotNumber: yarn.lotNumber || '',
+    });
+    setEditingYarnId(yarn.id);
+    setCurrentView('addYarn');
+  };
+
+  const handleDeleteYarnClick = (yarnId, e) => {
+    e.stopPropagation();
+    setYarnToDelete(yarnId);
+    setShowDeleteYarnDialog(true);
+  };
+
+  const handleConfirmDeleteYarn = async () => {
+    await storage.delete(`yarn:${yarnToDelete}`);
+    setYarnInventory(yarnInventory.filter(y => y.id !== yarnToDelete));
+    setShowDeleteYarnDialog(false);
+    setYarnToDelete(null);
+  };
+
   // Render views
   // Render load error dialog (independent of view)
   if (showLoadErrorDialog) {
@@ -743,10 +875,21 @@ const YarnTracker = () => {
           
           <button
             onClick={() => setCurrentView('upload')}
-            className="w-full mb-6 bg-gradient-to-r from-pink-300 to-purple-300 text-white px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg"
+            className="w-full mb-3 bg-gradient-to-r from-pink-300 to-purple-300 text-white px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg"
           >
             <Plus size={24} />
             Start New Project
+          </button>
+          <button
+            onClick={() => setCurrentView('inventory')}
+            className="w-full mb-6 border-2 border-purple-300 text-purple-700 px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-purple-50 transition-all shadow-md"
+          >
+            My Yarn Stash
+            {yarnInventory.length > 0 && (
+              <span className="bg-purple-200 text-purple-800 text-sm px-2 py-0.5 rounded-full">
+                {yarnInventory.reduce((sum, y) => sum + (y.quantity || 1), 0)} skeins
+              </span>
+            )}
           </button>
 
           {isLoadingProjects ? (
@@ -1298,6 +1441,313 @@ const YarnTracker = () => {
                     Keep Crafting
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'inventory') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <button
+            onClick={() => setCurrentView('home')}
+            className="mb-6 flex items-center gap-2 text-purple-700 hover:text-purple-900"
+          >
+            <ArrowLeft size={20} />
+            Back to Projects
+          </button>
+
+          <h1 className="text-4xl font-bold text-purple-800 mb-6 text-center">My Yarn Stash</h1>
+
+          <button
+            onClick={() => {
+              setYarnForm({ brand: '', productName: '', color: '', type: '', size: '', material: '', quantity: 1, weightPerSkein: '', careInstructions: '', lotNumber: '' });
+              setEditingYarnId(null);
+              setCurrentView('addYarn');
+            }}
+            className="w-full mb-6 bg-gradient-to-r from-pink-300 to-purple-300 text-white px-6 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg"
+          >
+            <Plus size={24} />
+            Add Yarn
+          </button>
+
+          {yarnInventory.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500 text-lg mb-2">No yarn in your stash yet</div>
+              <div className="text-gray-400">Click "Add Yarn" to start tracking!</div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {yarnInventory.map(yarn => (
+                <div key={yarn.id} className="bg-white rounded-2xl p-5 shadow-md border-2 border-pink-100 relative">
+                  <div className="pr-28">
+                    <div className="flex flex-wrap items-baseline gap-2 mb-2">
+                      <h2 className="text-xl font-bold text-purple-700">
+                        {yarn.brand ? `${yarn.brand} – ` : ''}{yarn.productName}
+                      </h2>
+                      <span className="text-gray-600">{yarn.color}</span>
+                      {yarn.lotNumber && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                          Lot {yarn.lotNumber}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {yarn.type && (
+                        <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded-lg">{yarn.type}</span>
+                      )}
+                      {yarn.size && (
+                        <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-lg">Size {yarn.size}</span>
+                      )}
+                      {yarn.material && (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">{yarn.material}</span>
+                      )}
+                      {yarn.quantity && (
+                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg">
+                          {yarn.quantity} {yarn.quantity === 1 ? 'skein' : 'skeins'}
+                        </span>
+                      )}
+                      {yarn.weightPerSkein && (
+                        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg">{yarn.weightPerSkein}/skein</span>
+                      )}
+                    </div>
+                    {yarn.careInstructions && (
+                      <div className="mt-2 text-xs text-gray-500 italic">{yarn.careInstructions}</div>
+                    )}
+                  </div>
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <button
+                      onClick={() => handleEditYarn(yarn)}
+                      className="bg-purple-400 hover:bg-purple-500 text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteYarnClick(yarn.id, e)}
+                      className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showDeleteYarnDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-8 max-w-md shadow-2xl">
+                <h2 className="text-2xl font-bold text-purple-800 mb-4">Remove Yarn</h2>
+                <p className="text-gray-700 mb-6">
+                  Are you sure you want to remove this yarn from your stash? This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowDeleteYarnDialog(false); setYarnToDelete(null); }}
+                    className="flex-1 bg-gray-300 text-gray-800 px-6 py-3 rounded-xl font-semibold hover:bg-gray-400 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDeleteYarn}
+                    className="flex-1 bg-gradient-to-r from-red-400 to-pink-400 text-white px-6 py-3 rounded-xl font-semibold hover:from-red-500 hover:to-pink-500 transition-all"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'addYarn') {
+    const brandSuggestions = [...new Set(yarnInventory.map(y => y.brand).filter(Boolean))];
+    const nameSuggestions = [...new Set(
+      yarnInventory
+        .filter(y => !yarnForm.brand || y.brand?.toLowerCase() === yarnForm.brand.toLowerCase())
+        .map(y => y.productName)
+    )];
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={() => {
+              setCurrentView('inventory');
+              setYarnForm({ brand: '', productName: '', color: '', type: '', size: '', material: '', quantity: 1, weightPerSkein: '', careInstructions: '', lotNumber: '' });
+              setEditingYarnId(null);
+            }}
+            className="mb-6 flex items-center gap-2 text-purple-700 hover:text-purple-900"
+          >
+            <ArrowLeft size={20} />
+            Back to Stash
+          </button>
+
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <h1 className="text-3xl font-bold text-purple-800 mb-6">
+              {editingYarnId ? 'Edit Yarn' : 'Add Yarn'}
+            </h1>
+
+            <div className="space-y-5">
+              {/* Brand + Product Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Brand</label>
+                  <input
+                    type="text"
+                    list="yarn-brand-suggestions"
+                    value={yarnForm.brand}
+                    onChange={(e) => setYarnForm({ ...yarnForm, brand: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                    placeholder="Lion Brand"
+                  />
+                  <datalist id="yarn-brand-suggestions">
+                    {brandSuggestions.map(b => <option key={b} value={b} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Product Name *</label>
+                  <input
+                    type="text"
+                    list="yarn-name-suggestions"
+                    value={yarnForm.productName}
+                    onChange={(e) => setYarnForm({ ...yarnForm, productName: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                    placeholder="Pound of Love"
+                  />
+                  <datalist id="yarn-name-suggestions">
+                    {nameSuggestions.map(n => <option key={n} value={n} />)}
+                  </datalist>
+                </div>
+              </div>
+
+              {/* Color + Lot Number */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Color *</label>
+                  <input
+                    type="text"
+                    value={yarnForm.color}
+                    onChange={(e) => setYarnForm({ ...yarnForm, color: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                    placeholder="Soft Teal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Lot Number</label>
+                  <input
+                    type="text"
+                    value={yarnForm.lotNumber}
+                    onChange={(e) => setYarnForm({ ...yarnForm, lotNumber: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                    placeholder="AB1234"
+                  />
+                </div>
+              </div>
+
+              {/* Type + Size */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Type</label>
+                  <select
+                    value={yarnForm.type}
+                    onChange={(e) => setYarnForm({ ...yarnForm, type: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none bg-white"
+                  >
+                    <option value="">Select type...</option>
+                    {YARN_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Size</label>
+                  <select
+                    value={yarnForm.size}
+                    onChange={(e) => setYarnForm({ ...yarnForm, size: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none bg-white"
+                  >
+                    <option value="">Select size...</option>
+                    {YARN_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Material */}
+              <div>
+                <label className="block text-purple-700 font-semibold mb-2">Material</label>
+                <select
+                  value={yarnForm.material}
+                  onChange={(e) => setYarnForm({ ...yarnForm, material: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none bg-white"
+                >
+                  <option value="">Select material...</option>
+                  {YARN_MATERIALS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+
+              {/* Quantity + Weight per Skein */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Quantity (skeins)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={yarnForm.quantity}
+                    onChange={(e) => setYarnForm({ ...yarnForm, quantity: parseInt(e.target.value) || 1 })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-semibold mb-2">Weight per Skein</label>
+                  <input
+                    type="text"
+                    value={yarnForm.weightPerSkein}
+                    onChange={(e) => setYarnForm({ ...yarnForm, weightPerSkein: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                    placeholder="100g"
+                  />
+                </div>
+              </div>
+
+              {/* Care Instructions */}
+              <div>
+                <label className="block text-purple-700 font-semibold mb-2">Care Instructions</label>
+                <textarea
+                  value={yarnForm.careInstructions}
+                  onChange={(e) => setYarnForm({ ...yarnForm, careInstructions: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:border-purple-400 focus:outline-none"
+                  placeholder="Machine wash cold, lay flat to dry"
+                />
+              </div>
+
+              <button
+                onClick={handleSaveYarn}
+                className="w-full bg-gradient-to-r from-pink-300 to-purple-300 text-white px-6 py-4 rounded-2xl font-semibold hover:from-pink-400 hover:to-purple-400 transition-all shadow-lg"
+              >
+                {editingYarnId ? 'Save Changes' : 'Add to Stash'}
+              </button>
+            </div>
+          </div>
+
+          {showYarnEmptyFieldsDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-8 max-w-md shadow-2xl">
+                <h2 className="text-2xl font-bold text-purple-800 mb-4">Missing Information</h2>
+                <p className="text-gray-700 mb-6">
+                  Please fill in at least the Product Name and Color.
+                </p>
+                <button
+                  onClick={() => setShowYarnEmptyFieldsDialog(false)}
+                  className="w-full bg-gradient-to-r from-purple-300 to-pink-300 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-400 hover:to-pink-400 transition-all"
+                >
+                  OK
+                </button>
               </div>
             </div>
           )}
